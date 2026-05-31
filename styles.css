@@ -1,0 +1,108 @@
+/* カスタムスタイル — Tailwind で完結しない部分のみ */
+
+:root {
+  --accent: #c15f3c;
+}
+
+/* 左ペイン固定幅 */
+.left-pane {
+  width: 340px;
+  min-width: 340px;
+}
+
+/* 検索ボックスのフォーカスリング */
+#search-input:focus {
+  ring-color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(193, 95, 60, 0.25);
+}
+
+/* 名刺カード */
+.card-item {
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.card-item:hover {
+  background-color: #fdf4f1;
+  border-color: #e8c4b4;
+}
+
+.card-item.selected {
+  background-color: #fdf4f1;
+  border-color: var(--accent);
+}
+
+.card-item .card-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.card-item .card-company {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.card-item .card-title {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+/* 詳細ペインの行スタイル */
+.detail-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.detail-label {
+  width: 56px;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+/* フォームのスタイル */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.form-input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #1f2937;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  width: 100%;
+}
+
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(193, 95, 60, 0.2);
+}
+
+/* 空状態のpaneは全高を使う */
+#pane-empty {
+  min-height: 100%;
+}

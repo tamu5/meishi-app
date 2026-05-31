@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>名刺管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-gray-50 h-screen flex flex-col" style="font-family: '游ゴシック', 'Yu Gothic', sans-serif;">
+
+  <!-- ヘッダー -->
+  <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center shadow-sm">
+    <span class="text-lg font-semibold" style="color: #c15f3c;">名刺管理</span>
+  </header>
+
+  <!-- メインレイアウト -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- 左ペイン -->
+    <aside class="left-pane bg-white border-r border-gray-200 flex flex-col">
+
+      <!-- 検索・新規登録 -->
+      <div class="p-4 border-b border-gray-100 space-y-3">
+        <input
+          id="search-input"
+          type="text"
+          placeholder="氏名・会社名・役職で検索"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+          style="--tw-ring-color: #c15f3c;"
+        />
+        <button
+          id="btn-new"
+          class="w-full rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          style="background-color: #c15f3c;"
+        >
+          ＋ 新規登録
+        </button>
+      </div>
+
+      <!-- 名刺リスト -->
+      <ul id="card-list" class="flex-1 overflow-y-auto p-3 space-y-2">
+        <!-- カードは app.js で動的生成 -->
+      </ul>
+
+    </aside>
+
+    <!-- 右ペイン -->
+    <main class="flex-1 overflow-y-auto relative">
+
+      <!-- 空状態 -->
+      <div id="pane-empty" class="pane h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
+        <svg class="w-16 h-16 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M3 10h18M3 6h18M3 14h10m4 4h-4m0 0H9m4 0v-4" />
+        </svg>
+        <p class="text-sm">名刺を選択するか、新規登録してください</p>
+      </div>
+
+      <!-- 詳細ペイン -->
+      <div id="pane-detail" class="pane hidden p-8 max-w-2xl">
+
+        <!-- ヘッダー行 -->
+        <div class="flex items-start justify-between mb-6">
+          <div>
+            <h2 id="detail-name" class="text-2xl font-bold text-gray-800"></h2>
+            <p id="detail-company" class="text-gray-500 mt-1"></p>
+            <p id="detail-title" class="text-sm text-gray-400 mt-0.5"></p>
+          </div>
+          <div class="flex gap-2 mt-1">
+            <button id="btn-edit"
+              class="border border-gray-300 rounded-lg px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              編集
+            </button>
+            <button id="btn-delete"
+              class="rounded-lg px-4 py-1.5 text-sm text-white bg-red-500 hover:bg-red-600 transition-colors">
+              削除
+            </button>
+          </div>
+        </div>
+
+        <!-- 詳細情報 -->
+        <div class="bg-gray-50 rounded-lg p-5 space-y-4 shadow-sm">
+          <div id="detail-row-email" class="detail-row">
+            <span class="detail-label">メール</span>
+            <a id="detail-email" href="#" class="detail-value text-blue-600 hover:underline"></a>
+          </div>
+          <div id="detail-row-phone" class="detail-row">
+            <span class="detail-label">電話</span>
+            <span id="detail-phone" class="detail-value"></span>
+          </div>
+          <div id="detail-row-memo" class="detail-row items-start">
+            <span class="detail-label pt-0.5">メモ</span>
+            <p id="detail-memo" class="detail-value whitespace-pre-wrap"></p>
+          </div>
+        </div>
+
+        <p id="detail-created" class="text-xs text-gray-300 mt-4"></p>
+      </div>
+
+      <!-- 登録・編集フォーム -->
+      <div id="pane-form" class="pane hidden p-8 max-w-2xl">
+        <h2 id="form-title" class="text-xl font-bold text-gray-800 mb-6"></h2>
+
+        <form id="card-form" class="space-y-4" novalidate>
+          <input type="hidden" id="field-id" />
+
+          <div class="form-group">
+            <label class="form-label">氏名 <span class="text-red-400">*</span></label>
+            <input id="field-name" type="text" class="form-input" placeholder="山田 太郎" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">会社名 <span class="text-red-400">*</span></label>
+            <input id="field-company" type="text" class="form-input" placeholder="株式会社サンプル" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">役職</label>
+            <input id="field-title" type="text" class="form-input" placeholder="営業部長" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">メール</label>
+            <input id="field-email" type="email" class="form-input" placeholder="yamada@example.com" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">電話</label>
+            <input id="field-phone" type="tel" class="form-input" placeholder="03-0000-0000" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">メモ</label>
+            <textarea id="field-memo" class="form-input resize-none" rows="4" placeholder="展示会で名刺交換。プロジェクトXに関心あり。"></textarea>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button type="submit" id="btn-save"
+              class="rounded-lg px-6 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              style="background-color: #c15f3c;">
+              保存
+            </button>
+            <button type="button" id="btn-cancel"
+              class="border border-gray-300 rounded-lg px-6 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              キャンセル
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
