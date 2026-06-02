@@ -1,55 +1,14 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+);
+
+const TABLE = 'meishi_cards';
+
 (function () {
   'use strict';
-
-  const STORAGE_KEY = 'meishi-cards';
-
-  // ── データ層 ────────────────────────────────────────
-
-  function loadCards() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  }
-
-  function saveCards(cards) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
-  }
-
-  function seedIfEmpty() {
-    if (localStorage.getItem(STORAGE_KEY) !== null) return;
-    const now = Date.now();
-    const seeds = [
-      {
-        id: String(now - 2000),
-        name: '高橋 健一',
-        company: 'グローバルテック株式会社',
-        title: 'シニアエンジニア',
-        email: 'takahashi@globaltech.example',
-        phone: '03-1234-5678',
-        memo: '技術カンファレンスで名刺交換。クラウド基盤に詳しい。',
-        createdAt: new Date(now - 2000).toISOString(),
-      },
-      {
-        id: String(now - 1000),
-        name: '鈴木 莉奈',
-        company: 'ネクストウェーブ合同会社',
-        title: 'マーケティング部長',
-        email: 'suzuki@nextwave.example',
-        phone: '06-9876-5432',
-        memo: '展示会でお会いした。SNSマーケに強み。',
-        createdAt: new Date(now - 1000).toISOString(),
-      },
-      {
-        id: String(now),
-        name: '佐藤 翔太',
-        company: '株式会社フューチャーブリッジ',
-        title: '代表取締役',
-        email: 'sato@futurebridge.example',
-        phone: '090-0000-1111',
-        memo: '紹介経由。新規事業の相談あり。来月フォローアップ予定。',
-        createdAt: new Date(now).toISOString(),
-      },
-    ];
-    saveCards(seeds);
-  }
 
   // ── 状態 ────────────────────────────────────────────
 
@@ -57,49 +16,80 @@
 
   // ── UI 要素 ─────────────────────────────────────────
 
-  const elCardList   = document.getElementById('card-list');
+  const elCardList    = document.getElementById('card-list');
   const elSearchInput = document.getElementById('search-input');
-  const elBtnNew     = document.getElementById('btn-new');
-  const elBtnEdit    = document.getElementById('btn-edit');
-  const elBtnDelete  = document.getElementById('btn-delete');
-  const elBtnSave    = document.getElementById('btn-save');
-  const elBtnCancel  = document.getElementById('btn-cancel');
-  const elCardForm   = document.getElementById('card-form');
+  const elBtnNew      = document.getElementById('btn-new');
+  const elBtnEdit     = document.getElementById('btn-edit');
+  const elBtnDelete   = document.getElementById('btn-delete');
+  const elCardForm    = document.getElementById('card-form');
 
   // ── ペイン切替 ──────────────────────────────────────
 
   function showPane(paneName) {
     ['pane-empty', 'pane-detail', 'pane-form'].forEach((id) => {
-      const el = document.getElementById(id);
-      el.classList.toggle('hidden', id !== paneName);
+      document.getElementById(id).classList.toggle('hidden', id !== paneName);
     });
+  }
+
+  // ── データ層（Supabase） ────────────────────────────
+
+  async function fetchCards(query) {
+    const q = (query || '').trim();
+    let req = supabase
+      .from(TABLE)
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (q) {
+      req = req.or(
+        `name.ilike.%${q}%,company.ilike.%${q}%,title.ilike.%${q}%`,
+      );
+    }
+
+    const { data, error } = await req;
+    if (error) { console.error(error); return []; }
+    return data;
+  }
+
+  async function fetchCard(id) {
+    const { data, error } = await supabase
+      .from(TABLE).select('*').eq('id', id).single();
+    if (error) { console.error(error); return null; }
+    return data;
+  }
+
+  async function insertCard(fields) {
+    const { data, error } = await supabase
+      .from(TABLE).insert(fields).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function updateCard(id, fields) {
+    const { error } = await supabase
+      .from(TABLE).update(fields).eq('id', id);
+    if (error) throw error;
+  }
+
+  async function deleteCard(id) {
+    const { error } = await supabase
+      .from(TABLE).delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── リスト描画 ──────────────────────────────────────
 
-  function renderList(query) {
-    const cards = loadCards();
-    const q = (query || '').trim().toLowerCase();
-
-    const filtered = cards
-      .filter((c) => {
-        if (!q) return true;
-        return (
-          c.name.toLowerCase().includes(q) ||
-          c.company.toLowerCase().includes(q) ||
-          (c.title || '').toLowerCase().includes(q)
-        );
-      })
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-
+  async function renderList(query) {
+    const cards = await fetchCards(query);
     elCardList.innerHTML = '';
 
-    if (filtered.length === 0) {
-      elCardList.innerHTML = '<li class="text-center text-gray-400 text-sm py-8">該当する名刺がありません</li>';
+    if (cards.length === 0) {
+      elCardList.innerHTML =
+        '<li class="text-center text-gray-400 text-sm py-8">該当する名刺がありません</li>';
       return;
     }
 
-    filtered.forEach((card) => {
+    cards.forEach((card) => {
       const li = document.createElement('li');
       li.className = 'card-item' + (card.id === selectedId ? ' selected' : '');
       li.dataset.id = card.id;
@@ -115,10 +105,10 @@
 
   // ── 詳細表示 ────────────────────────────────────────
 
-  function selectCard(id) {
+  async function selectCard(id) {
     selectedId = id;
-    renderList(elSearchInput.value);
-    const card = loadCards().find((c) => c.id === id);
+    await renderList(elSearchInput.value);
+    const card = await fetchCard(id);
     if (!card) return;
     renderDetail(card);
     showPane('pane-detail');
@@ -135,7 +125,7 @@
     setDetailRow('detail-row-phone', 'detail-phone', card.phone);
     setDetailRow('detail-row-memo',  'detail-memo',  card.memo);
 
-    const d = new Date(card.createdAt);
+    const d = new Date(card.created_at);
     document.getElementById('detail-created').textContent =
       `登録日時: ${d.toLocaleString('ja-JP')}`;
   }
@@ -154,30 +144,30 @@
 
   // ── フォーム ────────────────────────────────────────
 
-  function openFormNew() {
+  async function openFormNew() {
     selectedId = null;
-    renderList(elSearchInput.value);
+    await renderList(elSearchInput.value);
     document.getElementById('form-title').textContent = '新規登録';
     elCardForm.reset();
     document.getElementById('field-id').value = '';
     showPane('pane-form');
   }
 
-  function openFormEdit(id) {
-    const card = loadCards().find((c) => c.id === id);
+  async function openFormEdit(id) {
+    const card = await fetchCard(id);
     if (!card) return;
-    document.getElementById('form-title').textContent = '編集';
-    document.getElementById('field-id').value      = card.id;
-    document.getElementById('field-name').value    = card.name;
-    document.getElementById('field-company').value = card.company;
-    document.getElementById('field-title').value   = card.title || '';
-    document.getElementById('field-email').value   = card.email || '';
-    document.getElementById('field-phone').value   = card.phone || '';
-    document.getElementById('field-memo').value    = card.memo  || '';
+    document.getElementById('form-title').textContent   = '編集';
+    document.getElementById('field-id').value           = card.id;
+    document.getElementById('field-name').value         = card.name;
+    document.getElementById('field-company').value      = card.company;
+    document.getElementById('field-title').value        = card.title || '';
+    document.getElementById('field-email').value        = card.email || '';
+    document.getElementById('field-phone').value        = card.phone || '';
+    document.getElementById('field-memo').value         = card.memo  || '';
     showPane('pane-form');
   }
 
-  function handleSave(e) {
+  async function handleSave(e) {
     e.preventDefault();
 
     const name    = document.getElementById('field-name').value.trim();
@@ -188,50 +178,47 @@
     }
 
     const editId = document.getElementById('field-id').value;
-    const cards  = loadCards();
-
-    if (editId) {
-      const idx = cards.findIndex((c) => c.id === editId);
-      if (idx !== -1) {
-        cards[idx] = buildCard(editId, cards[idx].createdAt);
-      }
-    } else {
-      const newCard = buildCard(String(Date.now()), new Date().toISOString());
-      cards.unshift(newCard);
-      selectedId = newCard.id;
-    }
-
-    saveCards(cards);
-    renderList(elSearchInput.value);
-    selectCard(selectedId || editId);
-  }
-
-  function buildCard(id, createdAt) {
-    return {
-      id,
-      name:      document.getElementById('field-name').value.trim(),
-      company:   document.getElementById('field-company').value.trim(),
-      title:     document.getElementById('field-title').value.trim(),
-      email:     document.getElementById('field-email').value.trim(),
-      phone:     document.getElementById('field-phone').value.trim(),
-      memo:      document.getElementById('field-memo').value.trim(),
-      createdAt,
+    const fields = {
+      name,
+      company,
+      title: document.getElementById('field-title').value.trim() || null,
+      email: document.getElementById('field-email').value.trim() || null,
+      phone: document.getElementById('field-phone').value.trim() || null,
+      memo:  document.getElementById('field-memo').value.trim()  || null,
     };
+
+    try {
+      if (editId) {
+        await updateCard(editId, fields);
+        await selectCard(editId);
+      } else {
+        const created = await insertCard(fields);
+        selectedId = created.id;
+        await selectCard(created.id);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('保存に失敗しました。');
+    }
   }
 
   // ── 削除 ────────────────────────────────────────────
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!selectedId) return;
-    const card = loadCards().find((c) => c.id === selectedId);
+    const card = await fetchCard(selectedId);
     if (!card) return;
     if (!confirm(`「${card.name}」の名刺を削除しますか？`)) return;
 
-    const cards = loadCards().filter((c) => c.id !== selectedId);
-    saveCards(cards);
-    selectedId = null;
-    renderList(elSearchInput.value);
-    showPane('pane-empty');
+    try {
+      await deleteCard(selectedId);
+      selectedId = null;
+      await renderList(elSearchInput.value);
+      showPane('pane-empty');
+    } catch (err) {
+      console.error(err);
+      alert('削除に失敗しました。');
+    }
   }
 
   // ── ユーティリティ ──────────────────────────────────
@@ -248,7 +235,7 @@
   elBtnEdit.addEventListener('click', () => openFormEdit(selectedId));
   elBtnDelete.addEventListener('click', handleDelete);
   elCardForm.addEventListener('submit', handleSave);
-  elBtnCancel.addEventListener('click', () => {
+  document.getElementById('btn-cancel').addEventListener('click', () => {
     if (selectedId) {
       selectCard(selectedId);
     } else {
@@ -259,7 +246,6 @@
 
   // ── 起動 ────────────────────────────────────────────
 
-  seedIfEmpty();
   renderList();
   showPane('pane-empty');
 
